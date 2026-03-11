@@ -1,6 +1,9 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
+import { closeSync, mkdirSync, openSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
 
 export type BrowserKind = 'chrome' | 'safari'
+export type AutomationBrowserKind = BrowserKind | 'firefox'
 
 export type BrowserSession = {
   navigate: (url: string) => void
@@ -17,6 +20,10 @@ export type PageServer = {
   process: ChildProcess | null
 }
 
+export type BrowserAutomationLock = {
+  release: () => void
+}
+
 function runAppleScript(lines: string[]): string {
   return execFileSync(
     'osascript',
@@ -27,6 +34,46 @@ function runAppleScript(lines: string[]): string {
 
 export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+const LOCK_DIR = join(process.env['TMPDIR'] ?? '/tmp', 'pretext-browser-automation-locks')
+
+export async function acquireBrowserAutomationLock(
+  browser: AutomationBrowserKind,
+  timeoutMs = 120_000,
+): Promise<BrowserAutomationLock> {
+  mkdirSync(LOCK_DIR, { recursive: true })
+  const lockPath = join(LOCK_DIR, `${browser}.lock`)
+  const start = Date.now()
+
+  while (true) {
+    try {
+      const fd = openSync(lockPath, 'wx')
+      let released = false
+      return {
+        release() {
+          if (released) return
+          released = true
+          try {
+            closeSync(fd)
+          } catch {
+            // Ignore close races during teardown.
+          }
+          try {
+            rmSync(lockPath)
+          } catch {
+            // Best effort cleanup.
+          }
+        },
+      }
+    } catch (error) {
+      if (!(error instanceof Error) || !String(error).includes('EEXIST')) throw error
+      if (Date.now() - start >= timeoutMs) {
+        throw new Error(`Timed out waiting for ${browser} automation lock`)
+      }
+      await sleep(250)
+    }
+  }
 }
 
 async function canReachUrl(url: string): Promise<boolean> {

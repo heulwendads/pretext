@@ -5,6 +5,7 @@ import { createConnection, createServer as createNetServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
+  acquireBrowserAutomationLock,
   createBrowserSession,
   ensurePageServer,
   loadHashReport,
@@ -324,6 +325,7 @@ function printReport(report: AccuracyReport): void {
 
 let serverProcess: ChildProcess | null = null
 let proxyServer: HttpServer | null = null
+const lock = await acquireBrowserAutomationLock(browser)
 
 try {
   let baseUrl: string
@@ -358,4 +360,5 @@ try {
   if (serverProcess !== null) {
     serverProcess.kill('SIGTERM')
   }
+  lock.release()
 }

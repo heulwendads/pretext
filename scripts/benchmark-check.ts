@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs'
 import { type ChildProcess } from 'node:child_process'
 import {
+  acquireBrowserAutomationLock,
   createBrowserSession,
   ensurePageServer,
   loadHashReport,
@@ -87,6 +88,7 @@ const port = parseNumberFlag('port', Number.parseInt(process.env['BENCHMARK_CHEC
 const output = parseStringFlag('output')
 
 let serverProcess: ChildProcess | null = null
+const lock = await acquireBrowserAutomationLock(browser)
 const session = createBrowserSession(browser, { foreground: true })
 
 try {
@@ -112,4 +114,5 @@ try {
 } finally {
   session.close()
   serverProcess?.kill()
+  lock.release()
 }

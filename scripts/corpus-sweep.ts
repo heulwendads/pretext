@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs'
 import { type ChildProcess } from 'node:child_process'
 import {
+  acquireBrowserAutomationLock,
   createBrowserSession,
   ensurePageServer,
   loadHashReport,
@@ -221,6 +222,7 @@ const targets = options.all
       return [meta]
     })()
 
+const lock = await acquireBrowserAutomationLock(options.browser)
 const session = createBrowserSession(options.browser)
 let serverProcess: ChildProcess | null = null
 const summaries: SweepSummary[] = []
@@ -294,4 +296,5 @@ try {
 } finally {
   session.close()
   serverProcess?.kill()
+  lock.release()
 }

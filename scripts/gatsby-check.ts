@@ -1,5 +1,6 @@
 import { type ChildProcess } from 'node:child_process'
 import {
+  acquireBrowserAutomationLock,
   createBrowserSession,
   ensurePageServer,
   loadHashReport,
@@ -173,6 +174,7 @@ function printReport(report: GatsbyReport): void {
 }
 
 let serverProcess: ChildProcess | null = null
+const lock = await acquireBrowserAutomationLock(browser)
 const session = createBrowserSession(browser)
 
 try {
@@ -189,4 +191,5 @@ try {
 } finally {
   session.close()
   serverProcess?.kill('SIGTERM')
+  lock.release()
 }

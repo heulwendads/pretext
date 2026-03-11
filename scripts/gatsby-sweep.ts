@@ -1,5 +1,6 @@
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
+import { acquireBrowserAutomationLock } from './browser-automation.ts'
 
 type GatsbyLineMismatch = {
   line: number
@@ -354,6 +355,7 @@ function runDetailedDiagnose(mismatches: SweepMismatch[]): void {
 
 let serverProcess: ReturnType<typeof spawn> | null = null
 let browserSession: BrowserSession | null = null
+const lock = await acquireBrowserAutomationLock(options.browser as 'chrome' | 'safari')
 
 try {
   if (!(await canReachServer())) {
@@ -422,4 +424,5 @@ try {
   if (serverProcess !== null) {
     serverProcess.kill('SIGTERM')
   }
+  lock.release()
 }

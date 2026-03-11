@@ -1,5 +1,6 @@
 import { type ChildProcess } from 'node:child_process'
 import {
+  acquireBrowserAutomationLock,
   createBrowserSession,
   ensurePageServer,
   loadHashReport,
@@ -107,6 +108,7 @@ const lang = parseStringFlag('lang') ?? (dir === 'rtl' ? 'ar' : 'en')
 const method = parseStringFlag('method')
 
 let serverProcess: ChildProcess | null = null
+const lock = await acquireBrowserAutomationLock(browser)
 const session = createBrowserSession(browser)
 
 try {
@@ -127,4 +129,5 @@ try {
 } finally {
   session.close()
   serverProcess?.kill()
+  lock.release()
 }

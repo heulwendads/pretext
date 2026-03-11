@@ -1,5 +1,6 @@
 import { type ChildProcess } from 'node:child_process'
 import {
+  acquireBrowserAutomationLock,
   createBrowserSession,
   ensurePageServer,
   loadHashReport,
@@ -285,6 +286,7 @@ if (meta === undefined) {
   throw new Error(`Unknown corpus ${id}. Available corpora: ${sources.map(source => source.id).join(', ')}`)
 }
 
+const lock = await acquireBrowserAutomationLock(browser)
 const session = createBrowserSession(browser)
 const diagnose = hasFlag('diagnose')
 
@@ -314,4 +316,5 @@ try {
 } finally {
   session.close()
   serverProcess?.kill()
+  lock.release()
 }
