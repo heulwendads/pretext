@@ -368,24 +368,23 @@ function projectStaticLayout(layout: PageLayout, pageHeight: number): void {
 }
 
 function fitHeadlineFontSize(headlineWidth: number, pageWidth: number): number {
-  const maxSize = Math.min(94.4, Math.max(55.2, pageWidth * 0.055))
-  let low = Math.max(22, pageWidth * 0.026)
-  let high = maxSize
+  let low = Math.ceil(Math.max(22, pageWidth * 0.026))
+  let high = Math.floor(Math.min(94.4, Math.max(55.2, pageWidth * 0.055)))
   let best = low
 
-  for (let iteration = 0; iteration < 10; iteration++) {
-    const size = (low + high) / 2
+  while (low <= high) {
+    const size = Math.floor((low + high) / 2)
     const font = `700 ${size}px ${HEADLINE_FONT_FAMILY}`
     const headlinePrepared = getPrepared(HEADLINE_TEXT, font)
     if (!headlineBreaksInsideWord(headlinePrepared, headlineWidth)) {
       best = size
-      low = size
+      low = size + 1
     } else {
-      high = size
+      high = size - 1
     }
   }
 
-  return Math.round(best * 10) / 10
+  return best
 }
 
 function setHoveredLogo(nextHovered: LogoKind | null): void {
