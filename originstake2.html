@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>OriginStake — Drag Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:wght@300;400&family=Space+Mono&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #F5F0E8;
+      font-family: 'Source Serif 4', Georgia, serif;
+    }
+
+    .topbar {
+      border-bottom: 1px solid #1A1A1A;
+      padding: 8px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #888;
+    }
+    .pill {
+      background: #1A1A1A;
+      color: #F5F0E8;
+      padding: 4px 14px;
+      border-radius: 2px;
+      font-size: 9px;
+      animation: blink 2.5s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+    .header {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 28px 32px 0;
+      border-top: 3px solid #1A1A1A;
+      margin-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .kicker {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #1A56DB;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 900;
+      font-size: 48px;
+      line-height: 1.0;
+      text-transform: uppercase;
+      color: #1A1A1A;
+    }
+    .author {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #888;
+      margin-top: 14px;
+    }
+    .starburst { opacity: 0.12; width: 100px; flex-shrink: 0; }
+
+    .canvas-area {
+      max-width: 860px;
+      margin: 24px auto 0;
+      padding: 0 32px 60px;
+      border-top: 1px solid #D0C9BC;
+      padding-top: 24px;
+    }
+    canvas { display: block; width: 100%; }
+
+    .debug {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #1A1A1A;
+      color: #aaa;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      padding: 6px 24px;
+      display: flex;
+      gap: 32px;
+      z-index: 100;
+    }
+    .debug b { color: #a78bfa; }
+    .green { color: #4ade80; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <span>originstake.com · Ho Chi Minh City, Vietnam</span>
+  <span class="pill">← Kéo logo — text tự chạy theo →</span>
+  <span>Powered by @chenglou/pretext</span>
+</div>
+
+<div class="header">
+  <div>
+    <p class="kicker">OriginStake · Validator Infrastructure · Southeast Asia</p>
+    <h1>SECURING<br/>THE NEXT<br/>DECADE<br/>OF WEB3</h1>
+    <p class="author">OriginStake Team · HCMC, Vietnam · 2026</p>
+  </div>
+  <svg class="starburst" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="100,0 108,88 140,12 120,95 170,30 124,100 185,62 128,106 200,100 128,113 185,138 124,113 170,170 120,118 140,188 108,120 100,200 92,120 60,188 80,118 30,170 76,113 0,100 76,106 15,62 80,100 30,30 80,95 60,12 92,88" fill="#C04B2B"/>
+  </svg>
+</div>
+
+<div class="canvas-area">
+  <canvas id="cv"></canvas>
+</div>
+
+<div class="debug">
+  <span>logo: <b id="dbPos">—</b></span>
+  <span>lines: <b id="dbLines">—</b></span>
+  <span>time: <b id="dbTime">—</b>ms</span>
+  <span>DOM reflow: <b class="green">0</b></span>
+  <span>engine: <b>@chenglou/pretext</b></span>
+</div>
+
+<script type="module">
+import { prepareWithSegments, layoutNextLine }
+  from 'https://esm.sh/@chenglou/pretext'
+
+// ═══════════════════════════════════════
+//  ✏️  SỬA TEXT Ở ĐÂY
+// ═══════════════════════════════════════
+const TEXT = `OriginStake là validator chuyên nghiệp được xây dựng cho thị trường Đông Nam Á. Với hạ tầng bare-metal tại Việt Nam và Singapore, chúng tôi cung cấp dịch vụ staking, RPC endpoint và cơ sở hạ tầng blockchain cho các tổ chức tài chính, quỹ đầu tư và foundation.
+
+Uptime của chúng tôi đạt 99.99% — không phải con số marketing mà là thực tế on-chain có thể kiểm chứng tại status.originstake.com. Mỗi chain chúng tôi vận hành đều có tối thiểu 3 node độc lập để loại bỏ single point of failure.
+
+Chúng tôi đang vận hành validator cho Ethereum, Solana, Pharos Network, Monad, Story Protocol, Cosmos và hơn 50 blockchain khác. Với văn phòng và không gian coworking tại TP.HCM, OriginStake là cầu nối giữa hạ tầng blockchain toàn cầu và thị trường Việt Nam.
+
+The next decade of Web3 will not be won by the validator with the most chains. It will be won by the validator that becomes indispensable to the protocols that matter — through technical depth, geographic presence, and the kind of institutional trust that only comes from years of consistent execution.`
+
+// ═══════════════════════════════════════
+//  🖼️  SỬA LOGO Ở ĐÂY
+//  Thay bằng URL logo thật, hoặc './logo.png' nếu upload vào repo
+// ═══════════════════════════════════════
+const LOGO_URL = 'https://originstake.com/wp-content/uploads/2022/03/cropped-logo.png'
+
+// ═══════════════════════════════════════
+//  ⚙️  CÀI ĐẶT
+// ═══════════════════════════════════════
+const FONT    = '15px "Source Serif 4", Georgia, serif'
+const LINE_H  = 26
+const LOGO_R  = 75   // bán kính logo (px) — tăng/giảm để to/nhỏ hơn
+const GAP     = 14   // khoảng cách giữa logo và text
+
+// ── Setup ──
+const cv  = document.getElementById('cv')
+const ctx = cv.getContext('2d')
+const DPR = window.devicePixelRatio || 1
+
+let CW = 0   // canvas CSS width
+let lx = 0, ly = 0   // vị trí tâm logo
+let dragging = false
+
+// Logo image
+const img = new Image()
+img.crossOrigin = 'anonymous'
+img.src = LOGO_URL
+img.onload  = render
+img.onerror = render
+
+// Prepare text — chỉ chạy 1 lần
+const prepared = prepareWithSegments(TEXT, FONT)
+
+// ── Resize canvas ──
+function resize() {
+  CW = cv.parentElement.clientWidth
+  cv.width  = Math.round(CW * DPR)
+  cv.height = Math.round(700 * DPR)
+  cv.style.width  = CW + 'px'
+  cv.style.height = '700px'
+
+  // Vị trí logo ban đầu: 2/3 sang phải, 1/4 xuống
+  lx = CW * 0.68
+  ly = 120
+
+  render()
+}
+
+// ── Render toàn bộ ──
+function render() {
+  const W  = CW
+  const H  = cv.height / DPR
+  const PAD = 0
+
+  ctx.save()
+  ctx.scale(DPR, DPR)
+
+  // Nền
+  ctx.fillStyle = '#F5F0E8'
+  ctx.fillRect(0, 0, W, H)
+
+  // ── LAYOUT TEXT với layoutNextLine ──
+  // Đây là phần core: mỗi dòng có width riêng tùy vị trí logo
+  let cursor = { segmentIndex: 0, graphemeIndex: 0 }
+  let y = LINE_H
+  let totalLines = 0
+
+  ctx.font = FONT
+  ctx.fillStyle = '#1A1A1A'
+  ctx.textBaseline = 'alphabetic'
+
+  while (true) {
+    const lineTop = y - LINE_H
+    const lineBot = y
+
+    // Dòng này có chạm vùng logo không?
+    const logoTop = ly - LOGO_R - GAP
+    const logoBot = ly + LOGO_R + GAP
+    const hit = lineBot > logoTop && lineTop < logoBot
+
+    let lineX = PAD
+    let lineW = W - PAD * 2
+
+    if (hit) {
+      if (lx < W / 2) {
+        // Logo bên TRÁI → text bắt đầu sau logo
+        lineX = lx + LOGO_R + GAP
+        lineW = W - PAD - lineX
+      } else {
+        // Logo bên PHẢI → text kết thúc trước logo
+        lineW = (lx - LOGO_R - GAP) - PAD
+      }
+    }
+
+    if (lineW < 80) { y += LINE_H; if (y > 3000) break; continue }
+
+    const line = layoutNextLine(prepared, cursor, lineW)
+    if (!line) break
+
+    ctx.fillText(line.text, lineX, y)
+    cursor = line.end
+    y += LINE_H
+    totalLines++
+    if (y > 3000) break
+  }
+
+  // Resize canvas height theo nội dung
+  const neededH = y + 40
+  if (Math.abs(neededH - H) > LINE_H * 2) {
+    cv.height = Math.round(neededH * DPR)
+    cv.style.height = neededH + 'px'
+  }
+
+  // ── VẼ LOGO ──
+  const cx = lx, cy = ly
+
+  // Shadow
+  ctx.save()
+  ctx.shadowColor = 'rgba(0,0,0,0.22)'
+  ctx.shadowBlur  = 22
+  ctx.shadowOffsetY = 5
+
+  ctx.fillStyle = '#1A1A1A'
+  ctx.beginPath()
+  ctx.arc(cx, cy, LOGO_R, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+
+  // Clip image vào hình tròn
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(cx, cy, LOGO_R, 0, Math.PI * 2)
+  ctx.clip()
+
+  if (img.complete && img.naturalWidth > 0 && !img._failed) {
+    const s = LOGO_R * 1.35
+    ctx.drawImage(img, cx - s/2, cy - s/2, s, s)
+  } else {
+    // Fallback: vẽ logo SVG inline nếu ảnh load lỗi
+    drawFallback(ctx, cx, cy, LOGO_R)
+  }
+  ctx.restore()
+
+  // Viền nhấp nháy khi chưa drag
+  if (!dragging) {
+    ctx.save()
+    ctx.strokeStyle = 'rgba(26,86,219,0.4)'
+    ctx.lineWidth = 1.5
+    ctx.setLineDash([5, 4])
+    ctx.beginPath()
+    ctx.arc(cx, cy, LOGO_R + 5, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
+  }
+
+  ctx.restore()
+
+  // Debug
+  document.getElementById('dbLines').textContent = totalLines
+  document.getElementById('dbPos').textContent = `(${Math.round(lx)}, ${Math.round(ly)})`
+}
+
+function drawFallback(ctx, cx, cy, r) {
+  // Nền tối đã có — vẽ hexagon + text trắng
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 3) * i - Math.PI / 6
+    const px = cx + r * 0.7 * Math.cos(a)
+    const py = cy + r * 0.7 * Math.sin(a)
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)
+  }
+  ctx.closePath()
+  ctx.stroke()
+
+  ctx.fillStyle = 'white'
+  ctx.font = `bold ${r * 0.17}px "Space Mono", monospace`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('ORIGIN', cx, cy - r * 0.12)
+  ctx.fillText('STAKE', cx, cy + r * 0.15)
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
+}
+
+// ── Drag events ──
+function getPos(e) {
+  const rect = cv.getBoundingClientRect()
+  const src = e.touches ? e.touches[0] : e
+  return {
+    x: (src.clientX - rect.left),
+    y: (src.clientY - rect.top)
+  }
+}
+
+function hitLogo(x, y) {
+  return Math.hypot(x - lx, y - ly) <= LOGO_R
+}
+
+cv.addEventListener('mousedown', e => {
+  const p = getPos(e)
+  if (hitLogo(p.x, p.y)) {
+    dragging = true
+    cv.style.cursor = 'grabbing'
+    e.preventDefault()
+  }
+})
+
+cv.addEventListener('mousemove', e => {
+  const p = getPos(e)
+  if (dragging) {
+    lx = Math.max(LOGO_R, Math.min(p.x, CW - LOGO_R))
+    ly = Math.max(LOGO_R, Math.min(p.y, cv.height / DPR - LOGO_R))
+    const t0 = performance.now()
+    render()
+    document.getElementById('dbTime').textContent = (performance.now() - t0).toFixed(2)
+  } else {
+    cv.style.cursor = hitLogo(p.x, p.y) ? 'grab' : 'default'
+  }
+})
+
+document.addEventListener('mouseup', () => {
+  dragging = false
+  cv.style.cursor = 'default'
+})
+
+// Touch support
+cv.addEventListener('touchstart', e => {
+  const p = getPos(e)
+  if (hitLogo(p.x, p.y)) { dragging = true; e.preventDefault() }
+}, { passive: false })
+
+cv.addEventListener('touchmove', e => {
+  if (!dragging) return
+  const p = getPos(e)
+  lx = Math.max(LOGO_R, Math.min(p.x, CW - LOGO_R))
+  ly = Math.max(LOGO_R, Math.min(p.y, cv.height / DPR - LOGO_R))
+  render()
+  e.preventDefault()
+}, { passive: false })
+
+cv.addEventListener('touchend', () => { dragging = false })
+
+// ── Init ──
+window.addEventListener('resize', resize)
+resize()
+</script>
+</body>
+</html>
