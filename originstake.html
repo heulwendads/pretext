@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>OriginStake — Drag Demo</title>
+  <style>
+    body { margin: 0; background: #F5F0E8; font-family: Georgia, serif; }
+    canvas { display: block; margin: 40px auto; }
+    p { text-align: center; font-size: 13px; color: #888; margin-top: -20px; }
+  </style>
+</head>
+<body>
+  <canvas id="cv"></canvas>
+  <p>← Kéo logo để text chạy theo →</p>
+
+<script type="module">
+import { prepareWithSegments, layoutNextLine }
+  from 'https://esm.sh/@chenglou/pretext'
+
+const cv  = document.getElementById('cv')
+const ctx = cv.getContext('2d')
+const W   = Math.min(window.innerWidth - 40, 800)
+cv.width  = W
+cv.height = 600
+
+const FONT   = '15px Georgia, serif'
+const LINE_H = 26
+const LOGO_R = 70   // bán kính logo
+const GAP    = 12
+
+// ── VỊ TRÍ LOGO ban đầu ──
+let lx = W * 0.65   // tâm x
+let ly = 120        // tâm y
+let dragging = false
+
+// ── TEXT OriginStake ──
+const TEXT = `OriginStake là validator chuyên nghiệp được xây dựng cho thị trường Đông Nam Á. Với hạ tầng bare-metal tại Việt Nam và Singapore, chúng tôi cung cấp dịch vụ staking, RPC endpoint và cơ sở hạ tầng blockchain cho các tổ chức tài chính, quỹ đầu tư và foundation.
+
+Uptime của chúng tôi đạt 99.99% — không phải con số marketing mà là thực tế on-chain có thể kiểm chứng tại status.originstake.com. Mỗi chain chúng tôi vận hành đều có tối thiểu 3 node độc lập để loại bỏ single point of failure.
+
+Chúng tôi đang vận hành validator cho Ethereum, Solana, Pharos Network, Monad, Story Protocol, Cosmos và hơn 50 blockchain khác. Với văn phòng và không gian coworking tại TP.HCM, OriginStake là cầu nối giữa hạ tầng blockchain toàn cầu và thị trường Việt Nam.`
+
+// ── PREPARE TEXT (1 lần duy nhất) ──
+const prepared = prepareWithSegments(TEXT, FONT)
+
+// ── LOGO IMAGE ──
+const img = new Image()
+img.src = 'https://originstake.com/wp-content/uploads/2022/03/cropped-logo.png'
+img.onload  = render
+img.onerror = render
+
+// ── RENDER ──
+function render() {
+  ctx.clearRect(0, 0, W, cv.height)
+
+  // Nền
+  ctx.fillStyle = '#F5F0E8'
+  ctx.fillRect(0, 0, W, cv.height)
+
+  // Layout text
+  let cursor = { segmentIndex: 0, graphemeIndex: 0 }
+  let y = LINE_H + 10
+  let totalLines = 0
+  const PAD = 32
+
+  ctx.font      = FONT
+  ctx.fillStyle = '#1A1A1A'
+  ctx.textBaseline = 'alphabetic'
+
+  while (true) {
+    const top = y - LINE_H
+    const bot = y
+
+    // Dòng này có chạm vào vùng logo không?
+    const hit = bot > (ly - LOGO_R - GAP) && top < (ly + LOGO_R + GAP)
+
+    let lineX = PAD
+    let lineW = W - PAD * 2
+
+    if (hit) {
+      // Logo bên phải → thu ngắn chiều rộng dòng
+      if (lx > W / 2) {
+        lineW = (lx - LOGO_R - GAP) - PAD
+      } else {
+        // Logo bên trái → dịch điểm bắt đầu sang phải
+        lineX = lx + LOGO_R + GAP
+        lineW = (W - PAD) - lineX
+      }
+    }
+
+    if (lineW < 60) { y += LINE_H; if (y > 2000) break; continue }
+
+    const line = layoutNextLine(prepared, cursor, lineW)
+    if (!line) break
+
+    ctx.fillText(line.text, lineX, y)
+    cursor = line.end
+    y += LINE_H
+    totalLines++
+    if (y > 2000) break
+  }
+
+  // Resize canvas height cho vừa nội dung
+  if (y + 40 !== cv.height) {
+    cv.height = y + 40
+  }
+
+  // ── VẼ LOGO ──
+  ctx.save()
+  // Shadow
+  ctx.shadowColor   = 'rgba(0,0,0,0.2)'
+  ctx.shadowBlur    = 20
+  ctx.shadowOffsetY = 4
+  // Vòng tròn nền
+  ctx.fillStyle = '#1A1A1A'
+  ctx.beginPath()
+  ctx.arc(lx, ly, LOGO_R, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+
+  // Clip ảnh logo vào hình tròn
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(lx, ly, LOGO_R, 0, Math.PI * 2)
+  ctx.clip()
+  if (img.complete && img.naturalWidth > 0) {
+    const s = LOGO_R * 1.3
+    ctx.drawImage(img, lx - s/2, ly - s/2, s, s)
+  } else {
+    // Fallback text
+    ctx.fillStyle = 'white'
+    ctx.font = 'bold 11px monospace'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('ORIGIN', lx, ly - 8)
+    ctx.fillText('STAKE', lx, ly + 8)
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'alphabetic'
+  }
+  ctx.restore()
+}
+
+// ── DRAG ──
+function pos(e) {
+  const r = cv.getBoundingClientRect()
+  const s = e.touches ? e.touches[0] : e
+  return { x: s.clientX - r.left, y: s.clientY - r.top }
+}
+function hit(x, y) {
+  return Math.hypot(x - lx, y - ly) < LOGO_R
+}
+
+cv.addEventListener('mousedown', e => {
+  const p = pos(e)
+  if (hit(p.x, p.y)) { dragging = true; cv.style.cursor = 'grabbing' }
+})
+cv.addEventListener('mousemove', e => {
+  const p = pos(e)
+  if (dragging) {
+    lx = Math.max(LOGO_R, Math.min(p.x, W - LOGO_R))
+    ly = Math.max(LOGO_R, Math.min(p.y, cv.height - LOGO_R))
+    render()
+  } else {
+    cv.style.cursor = hit(p.x, p.y) ? 'grab' : 'default'
+  }
+})
+document.addEventListener('mouseup', () => {
+  dragging = false; cv.style.cursor = 'default'
+})
+cv.addEventListener('touchstart', e => {
+  const p = pos(e); if (hit(p.x, p.y)) { dragging = true; e.preventDefault() }
+}, { passive: false })
+cv.addEventListener('touchmove', e => {
+  if (!dragging) return
+  const p = pos(e)
+  lx = Math.max(LOGO_R, Math.min(p.x, W - LOGO_R))
+  ly = Math.max(LOGO_R, Math.min(p.y, cv.height - LOGO_R))
+  render(); e.preventDefault()
+}, { passive: false })
+cv.addEventListener('touchend', () => { dragging = false })
+
+render()
+</script>
+</body>
+</html>
